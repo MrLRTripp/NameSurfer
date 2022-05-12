@@ -112,11 +112,17 @@ def compute_for_year_ranges(df, year_range, states, sexes):
 
 # multi select for state, sex. Input box for Start, Stop, Step year. Do validation.
 # Slider for year to animate Choropleth map of states. Try to find map that puts Alaska and Hawaii next to continental.
-all_state_names_list = ['All', 'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
-                        'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland',
-                        'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
-                        'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina',
-                        'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
+all_state_names_list = ['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','District of Columbia',
+'Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine',
+'Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada',
+'New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon',
+'Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia',
+'Washington','West Virginia','Wisconsin','Wyoming']
+all_state_abbrevations_list = ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA',
+'MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX',
+'UT','VT','VA','WA','WV','WI','WY']
+state_dict = dict(list(zip(all_state_names_list,all_state_abbrevations_list)))
+
 
 # Read the data files
 names_df = load_name_files()
@@ -130,7 +136,7 @@ app.layout = html.Div(children=[
            # style={'textAlign': 'center', 'color': '#503D36',
            #        'font-size': 40, 'font-family': 'Arial, Helvetica, sans-serif'}),
     html.Br(),
-    html.P(children=['Based on ',
+    html.P(children=['Idea based on ',
                      html.A('Stanford CS106A - Programming Methodology Name Surfer Assignment',
                             href='https://see.stanford.edu/materials/icspmcs106a/39-assignment-6-name-surfer.pdf'),
                      ],
@@ -146,7 +152,7 @@ app.layout = html.Div(children=[
                       id='sex'),
         html.Br(),
         html.Label('States'),
-        dcc.Dropdown(all_state_names_list, ['All'], multi=True, id='states'),
+        dcc.Dropdown(all_state_names_list, all_state_names_list, multi=True, id='states'),
     ], style={'padding': 10, 'flex': 1}),
     html.Div(children=[
         # Start year text box prepopulated with 1910
@@ -175,11 +181,19 @@ app.layout = html.Div(children=[
                    )
 
     ], style={'padding': 10, 'display': 'flex', 'flex-direction': 'row'}),
+
+    html.Div(children=[
+        # Refresh button after entering filter values
+        # After button is clicked, read state of other components
+        "After entering selection values, click to apply filters  ",
+        html.Button('Apply Filters', id='apply-filters', n_clicks=0, className='button-primary')
+    ] , style={'padding': 10, 'flex': 1}),
+
     html.Div(children=[
         # Check boxes of interesting names
         html.Label(
             'Select some interesting name groups'),
-        dcc.Checklist(['Top 10 Start Year', 'Top 10 End Year', 'Most Variance', 'Presidents','First Ladies', 'The Beatles'],
+        dcc.Checklist(['Top 50 New Names', 'Most Variance', 'Presidents','First Ladies', 'The Beatles'],
                       ['The Beatles'],
                       id='interesting-names'),
         # Enter your own list of names. They will be added to the interesting names.
@@ -194,7 +208,7 @@ app.layout = html.Div(children=[
     html.Div(children=[
         # Refresh button after entering filter values
         # After button is clicked, read state of other components
-        "After entering selection values, click Refresh  ",
+        "After selecting names, click Refresh  ",
         html.Button('Refresh', id='refresh-val', n_clicks=0, className='button-primary')
     ] , style={'padding': 10, 'flex': 1}),
 
@@ -212,20 +226,6 @@ app.layout = html.Div(children=[
 
     html.Br(),
 
-    #html.P("Payload range (Kg):"),
-    # TASK 3: Add a slider to select payload range
-    # dcc.RangeSlider(id='payload-slider',...)
-    # dcc.RangeSlider(id='payload-slider',
-    #    min=0, max=10000, step=1000,
-    #    marks={0: '0',
-    #           2500: '2500',
-    #           5000:'5000',
-    #           7500:'7500',
-    #           10000:'10000'},
-    #    value=[min_payload, max_payload]),
-
-    # TASK 4: Add a scatter chart to show the correlation between payload and launch success
-    # html.Div(dcc.Graph(id='success-payload-scatter-chart')),
 ])
 
 # Validate date ranges. If not valid, add a red text message (make it visible).
@@ -256,7 +256,7 @@ TheFirstLadies = ['Jill','Abigail','Louisa','Ellen','Barbara','Laura','Rosalynn'
 'Jacqueline','Mary','Dolley','Ida','Elizabeth','Pat','Michelle','Jane','Sarah','Nancy','Edith','Eleanor',
 'Helen','Margaret','Bess','Melania','Julia','Letitia','Hannah','Martha','Edith','Ellen']
 
-# ['Top 10 Start Year', 'Top 10 End Year', 'Most Variance', 'Presidents','First Ladies', 'The Beatles']
+# ['Top 50 New Names', 'Most Variance', 'Presidents','First Ladies', 'The Beatles']
 def create_name_superset(n_set,interesting_names, result_df):
     super_set = set()
     for group in interesting_names:
@@ -272,7 +272,17 @@ def create_name_superset(n_set,interesting_names, result_df):
             var_result_series = result_df[(result_df>=0).all(axis=1)].var(axis=1)
             var_result_top10_list = list(var_result_series.sort_values(ascending=False).head(10).index)
             super_set |= set(var_result_top10_list)
-
+        elif group == 'Top 50 New Names':
+            start_year = result_df.columns[0]
+            end_year = result_df.columns[-1]
+            series_start = result_df.loc[:,start_year]
+            start_set=set(series_start[series_start>0].index)
+            series_end = result_df.loc[:,end_year]
+            end_set=set(series_end[series_end>0].index)
+            new_name_list = list(end_set - start_set)
+            # Sort ascending since lower values means higher rank
+            top_50_new_names = list(result_df.loc[new_name_list].sort_values(by=end_year,ascending=True).head(50).index) 
+            super_set |= set(top_50_new_names)
 
     return super_set | n_set
 
@@ -310,7 +320,7 @@ def create_name_superset(n_set,interesting_names, result_df):
     State(component_id='start-year',component_property='value'),
     State(component_id='end-year',component_property='value'),
     State(component_id='year-step',component_property='value'),
-    Input(component_id='refresh-val', component_property='n_clicks'), prevent_initial_call=True
+    Input(component_id='apply-filters', component_property='n_clicks'), prevent_initial_call=True
 )
 def store_result_df(sex,states,start_year, end_year,year_step, n_clicks):
    if n_clicks is None:
@@ -319,7 +329,11 @@ def store_result_df(sex,states,start_year, end_year,year_step, n_clicks):
        # Call compute_for_year_ranges. Store the result df in JSON. When names change, read JSON an graph.
        yr_range = range(int(start_year),int(end_year), int(year_step))
        sex_1_char = [e[0] for e in sex]
-       result_df = compute_for_year_ranges(names_df,yr_range,states, sex_1_char)
+       # The SSA data set uses 2-char state abbreviations, so look up abbreviation in state_dict
+       state_abb_list = []
+       for i in states:
+            state_abb_list.append(state_dict[i])
+       result_df = compute_for_year_ranges(names_df,yr_range,state_abb_list, sex_1_char)
        return result_df.to_json(date_format='iso', orient='split')
 
 
@@ -347,6 +361,8 @@ def plot_name_ranks(name_ranks_json, csv_names,interesting_names,n_clicks):
         set_r = set(result_df.index)
         clean = list(name_superset & set_r)
         missing = list(name_superset - set_r)
+        if  (len(missing) > 0) and (missing[0]==''):
+            missing.pop(0) # When all values are removed from text box, an empty string is returned so ignore it.
 
         if len(clean) > 0:
             result_df_t = result_df.loc[clean, :].T
@@ -362,7 +378,7 @@ def plot_name_ranks(name_ranks_json, csv_names,interesting_names,n_clicks):
         else: 
             fig = go.Figure() #empty figure
 
-        if len(missing) > 0:    
+        if (len(missing) > 0):    
             return fig,\
                 {'width': '80%', 'display': 'inline-block', 'padding': '0 20'},\
                 {'display': 'inline-block', 'width': '15%', 'float':'right'},\
@@ -372,62 +388,6 @@ def plot_name_ranks(name_ranks_json, csv_names,interesting_names,n_clicks):
                 {'width': '100%', 'display': 'inline-block', 'padding': '0 20'},\
                 {'display': 'none', 'width': '15%', 'float':'right'},\
                 []
-
-# TASK 2:
-# Add a callback function for `site-dropdown` as input, `success-pie-chart` as output
-
-
-#@app.callback(Output(component_id='success-pie-chart', component_property='figure'),
-#              Input(component_id='site_dropdown', component_property='value'))
-#def create_outcome_graph(launch_site_value):
-#    # Select data based on the launch_site_value
-#    if launch_site_value == launch_site_list[0]:
-#        selected_df = spacex_df.groupby('Launch Site', as_index=False).sum()
-#        fig = px.pie(selected_df, values='class', names='Launch Site',
-#                     title=f'Total Booster Landing Success for {launch_site_value}')
-#    else:
-#        selected_df = pd.DataFrame(
-#            spacex_df[spacex_df['Launch Site'] == launch_site_value]['class'].value_counts()).reset_index()
-#        selected_df.rename(
-#            columns={"index": "outcome", "class": "outcome_total"}, inplace=True)
-#        # Let's create a more meaningful outcome category to hold values "Success" or "Failure"
-#        selected_df["outcome_cat"] = selected_df["outcome"].astype("category")
-#        # 0 will map to first item in list, "Failure"
-#        # 1 will map to second item in list, "Success"
-#        selected_df["outcome_cat"].cat.categories = ["Failure", "Success"]
-#        fig = px.pie(selected_df, values='outcome_total', names='outcome_cat',
-#                     title=f'Total Booster Landing Outcome for {launch_site_value}',
-#                     color='outcome_cat',
-#                     color_discrete_map={'Success': 'green',
-#                                         'Failure': 'red', })
-#
-#    fig.update_traces(textposition='inside', textinfo='percent+label')
-#
-#    return fig
-
-
-# TASK 4:
-# Add a callback function for `site-dropdown` and `payload-slider` as inputs, `success-payload-scatter-chart` as output
-#@app.callback(Output(component_id='success-payload-scatter-chart', component_property='figure'),
-#              Input(component_id='site_dropdown', component_property='value'),
-#              Input(component_id='payload-slider', component_property='value'))
-#def create_payload_graph(launch_site_value, payload_range):
-#    # Select data based on the launch_site_value
-#    if launch_site_value == launch_site_list[0]:
-#        selected_df = spacex_df[(spacex_df['Payload Mass (kg)'] >= payload_range[0]) & (
-#            spacex_df['Payload Mass (kg)'] <= payload_range[1])]
-#
-#        fig = px.scatter(selected_df, x='Payload Mass (kg)', y='class', color='Booster Version Category',
-#                         title=f'Correlation between Payload and Success for {launch_site_value}')
-#    else:
-#        selected_df = spacex_df[(spacex_df['Payload Mass (kg)'] >= payload_range[0]) & (spacex_df['Payload Mass (kg)'] <= payload_range[1])
-#                                & (spacex_df['Launch Site'] == launch_site_value)]
-#
-#        fig = px.scatter(selected_df, x='Payload Mass (kg)', y='class', color='Booster Version Category',
-#                         title=f'Correlation between Payload and Success for specific launch site {launch_site_value}')
-#
-#    return fig
-
 
 # Run the app
 if __name__ == '__main__':
