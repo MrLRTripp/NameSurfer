@@ -8,3 +8,5 @@ The data is from SSA https://www.ssa.gov/OACT/babynames/limits.html
 Instead of using Java to create it, use Python and the graphics and dashboard tools.
 
 Two main files **namesurfer.ipynb** and **name_dash_app.py**. I prefer to use Jupyter Notebooks to develop/test/debug then move code to dash app where the graphs can be updated interactively.
+
+They can generate interesting graphs of first name populatity over time. They can also generate some interesting name statistics such as names with highest variance over time.
